@@ -62,10 +62,7 @@ class SubwayConfig:
         self.LIST_Y = self.NEXT_TRAIN_Y + 100
         self.PADDING_X = 20
 
-        # Three MBTA routes at 1/6, 1/2, 5/6 of section height
-        self.TRAIN_1_Y = self.SECTION_Y + (self.SECTION_HEIGHT // 6)
-        self.TRAIN_2_Y = self.SECTION_Y + (self.SECTION_HEIGHT // 2)
-        self.TRAIN_3_Y = self.SECTION_Y + (self.SECTION_HEIGHT * 5 // 6)
+        pass  # Y positions are computed dynamically in layout based on route count
 
 @dataclass
 class TimeConfig:
@@ -84,6 +81,7 @@ class Config:
 
         # Stop IDs to poll for predictions
         self.MBTA_STOPS = [
+            'place-harvd',    # Green Line B — Harvard Avenue
             'place-stpul',    # Green Line C — St Paul St
             '1308',           # Route 66 — Harvard St @ Beacon St (inbound toward Harvard)
             '1372',           # Route 66 — Harvard St @ Beacon St (outbound toward Nubian)
@@ -91,10 +89,11 @@ class Config:
         ]
 
         # Route IDs to display, in order top-to-bottom
-        self.MBTA_ROUTES = ['Green-C', '66', 'CR-Worcester']
+        self.MBTA_ROUTES = ['Green-B', 'Green-C', '66', 'CR-Worcester']
 
         # Short labels shown inside the route circle
         self.MBTA_ROUTE_LABELS = {
+            'Green-B': 'B',
             'Green-C': 'C',
             '66': '66',
             'CR-Worcester': 'WR',
@@ -102,9 +101,10 @@ class Config:
 
         # Human-readable direction labels per route
         self.MBTA_DIRECTION_LABELS = {
-            'Green-C':      {0: 'Clev Cir', 1: 'Pk St'},
-            '66':           {0: 'Nubian',   1: 'Harvard'},
-            'CR-Worcester': {0: 'Worcester', 1: 'South Sta'},
+            'Green-B':      {0: 'Boston Col', 1: 'Govt Ctr'},
+            'Green-C':      {0: 'Clev Cir',   1: 'Pk St'},
+            '66':           {0: 'Nubian',      1: 'Harvard'},
+            'CR-Worcester': {0: 'Worcester',   1: 'South Sta'},
         }
         
         # Display configurations

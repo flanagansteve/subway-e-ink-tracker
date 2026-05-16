@@ -345,14 +345,16 @@ class LayoutManager:
 
     def _draw_next_trains(self, draw: ImageDraw.ImageDraw, trains: List[TrainArrival]):
         """Draw arrivals for each MBTA route with inbound/outbound rows"""
-        circle_radius = 60
+        n = len(config.MBTA_ROUTES)
+        circle_radius = 50
         text_start_x = self.display.ICON_COLUMN_X + circle_radius + 30
         text_area_width = self.display.MAIN_SECTION_WIDTH - text_start_x
 
+        # Evenly space routes across the train section
+        section_h = self.subway.SECTION_HEIGHT
         route_y_positions = [
-            self.subway.TRAIN_1_Y,
-            self.subway.TRAIN_2_Y,
-            self.subway.TRAIN_3_Y,
+            self.subway.SECTION_Y + section_h * (2 * i + 1) // (2 * n)
+            for i in range(n)
         ]
 
         for route_id, center_y in zip(config.MBTA_ROUTES, route_y_positions):
@@ -363,13 +365,14 @@ class LayoutManager:
                 route_id=route_id,
                 logo_center_y=center_y,
                 circle_radius=circle_radius,
+                ib_ob_offset=section_h // (2 * n) - 30,
                 text_start_x=text_start_x,
                 text_area_width=text_area_width,
             )
 
     def _draw_train_line_section(self, draw: ImageDraw.ImageDraw, trains: List[TrainArrival],
                                  route_id: str, logo_center_y: int, circle_radius: int,
-                                 text_start_x: int, text_area_width: int):
+                                 ib_ob_offset: int, text_start_x: int, text_area_width: int):
         """Draw one route's circle and its inbound/outbound arrival rows"""
         label = config.MBTA_ROUTE_LABELS.get(route_id, route_id[:2])
         self._draw_train_line_logo(draw, label, self.display.ICON_COLUMN_X, logo_center_y, circle_radius)
@@ -377,9 +380,8 @@ class LayoutManager:
         inbound = [t for t in trains if t.direction_id == 1]
         outbound = [t for t in trains if t.direction_id == 0]
 
-        # IB row above center, OB row below center
-        self._draw_direction_arrivals(draw, "IB", inbound, text_start_x, logo_center_y - 38, text_area_width)
-        self._draw_direction_arrivals(draw, "OB", outbound, text_start_x, logo_center_y + 38, text_area_width)
+        self._draw_direction_arrivals(draw, "IB", inbound, text_start_x, logo_center_y - ib_ob_offset, text_area_width)
+        self._draw_direction_arrivals(draw, "OB", outbound, text_start_x, logo_center_y + ib_ob_offset, text_area_width)
 
     def _draw_direction_arrivals(self, draw: ImageDraw.ImageDraw, label: str,
                                  trains: List[TrainArrival], x: int, y: int, max_width: int):

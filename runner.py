@@ -179,7 +179,7 @@ class Runner:
             
             # Start update services
             weather_service.start_updates(interval_seconds=300)  # 5 minutes
-            subway_service.start_updates(interval_seconds=5)    # 5 seconds
+            subway_service.start_updates(interval_seconds=20)
             
             # Keep the main thread running
             try:
