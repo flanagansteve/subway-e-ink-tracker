@@ -365,7 +365,7 @@ class LayoutManager:
                 route_id=route_id,
                 logo_center_y=center_y,
                 circle_radius=circle_radius,
-                ib_ob_offset=section_h // (2 * n) - 30,
+                ib_ob_offset=30,
                 text_start_x=text_start_x,
                 text_area_width=text_area_width,
             )
