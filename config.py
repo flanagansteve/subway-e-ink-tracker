@@ -81,7 +81,7 @@ class Config:
 
         # Stop IDs to poll for predictions
         self.MBTA_STOPS = [
-            'place-harvd',    # Green Line B — Harvard Avenue
+            'place-amory',    # Green Line B — Amory Street
             'place-stpul',    # Green Line C — St Paul St
             '1308',           # Route 66 — Harvard St @ Beacon St (inbound toward Harvard)
             '1372',           # Route 66 — Harvard St @ Beacon St (outbound toward Nubian)
