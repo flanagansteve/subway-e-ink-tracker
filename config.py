@@ -61,10 +61,11 @@ class SubwayConfig:
         self.NEXT_TRAIN_Y = self.SECTION_Y + 20
         self.LIST_Y = self.NEXT_TRAIN_Y + 100
         self.PADDING_X = 20
-        
-        # Position F and G trains at 1/4 and 3/4 of the section height
-        self.F_TRAIN_Y = self.SECTION_Y + (self.SECTION_HEIGHT // 2) - (self.SECTION_HEIGHT // 4)
-        self.G_TRAIN_Y = self.SECTION_Y + (self.SECTION_HEIGHT // 2) + (self.SECTION_HEIGHT // 4)
+
+        # Three MBTA routes at 1/6, 1/2, 5/6 of section height
+        self.TRAIN_1_Y = self.SECTION_Y + (self.SECTION_HEIGHT // 6)
+        self.TRAIN_2_Y = self.SECTION_Y + (self.SECTION_HEIGHT // 2)
+        self.TRAIN_3_Y = self.SECTION_Y + (self.SECTION_HEIGHT * 5 // 6)
 
 @dataclass
 class TimeConfig:
@@ -74,23 +75,37 @@ class TimeConfig:
 
 class Config:
     def __init__(self):
-        # Environment variables
         logger.info("Loading configuration from environment variables...")
-        self.WEATHER_KEY = os.getenv('WEATHER_KEY')
         self.DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
-        self.STATION_ID = os.getenv('STATION_ID')
-        self.TRAIN_LINE_1 = os.getenv('TRAIN_LINE_1')
-        self.TRAIN_LINE_2 = os.getenv('TRAIN_LINE_2')
-        self.WEATHER_ZIP = os.getenv('WEATHER_ZIP', '11231')  # Add default zip code
-        
-        if not self.STATION_ID:
-            raise ValueError("STATION_ID must be set in .env file")
-        if not self.TRAIN_LINE_1:
-            raise ValueError("TRAIN_LINE_1 must be set in .env file")
-        if not self.TRAIN_LINE_2:
-            raise ValueError("TRAIN_LINE_2 must be set in .env file")
-        if not self.WEATHER_KEY:
-            raise ValueError("WEATHER_KEY must be set in .env file")
+
+        self.MBTA_API_KEY = os.getenv('MBTA_API_KEY')
+        if not self.MBTA_API_KEY:
+            raise ValueError("MBTA_API_KEY must be set in .env file")
+
+        # Stop IDs to poll for predictions
+        self.MBTA_STOPS = [
+            'place-stpul',    # Green Line C — St Paul St
+            '1308',           # Route 66 — Harvard St @ Beacon St (inbound toward Harvard)
+            '1372',           # Route 66 — Harvard St @ Beacon St (outbound toward Nubian)
+            'place-WML-0025', # Framingham/Worcester Line — Lansdowne
+        ]
+
+        # Route IDs to display, in order top-to-bottom
+        self.MBTA_ROUTES = ['Green-C', '66', 'CR-Worcester']
+
+        # Short labels shown inside the route circle
+        self.MBTA_ROUTE_LABELS = {
+            'Green-C': 'C',
+            '66': '66',
+            'CR-Worcester': 'WR',
+        }
+
+        # Human-readable direction labels per route
+        self.MBTA_DIRECTION_LABELS = {
+            'Green-C':      {0: 'Clev Cir', 1: 'Pk St'},
+            '66':           {0: 'Nubian',   1: 'Harvard'},
+            'CR-Worcester': {0: 'Worcester', 1: 'South Sta'},
+        }
         
         # Display configurations
         self.display = DisplayConfig()
@@ -124,10 +139,10 @@ class Config:
             }
         }
 
-        # Weather coordinates (defaulting to NYC coordinates if not specified)
+        # Weather coordinates (Lansdowne/Fenway, Boston)
         self.WEATHER_COORDS = (
-            float(os.getenv('WEATHER_LAT', '40.7128')), 
-            float(os.getenv('WEATHER_LON', '-74.0060'))
+            float(os.getenv('WEATHER_LAT', '42.347')),
+            float(os.getenv('WEATHER_LON', '-71.100'))
         )
 
 # Create a global configuration instance

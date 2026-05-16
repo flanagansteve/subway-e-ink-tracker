@@ -340,173 +340,90 @@ class LayoutManager:
             )
 
     def _draw_subway_info(self, draw: ImageDraw.ImageDraw, trains: List[TrainArrival]):
-        """Draw subway arrival information"""
-        if not trains:
-            self._draw_no_trains_message(draw)
-            return
-
-        # Draw next F and G trains
+        """Draw MBTA arrival information for all three routes"""
         self._draw_next_trains(draw, trains)
 
     def _draw_next_trains(self, draw: ImageDraw.ImageDraw, trains: List[TrainArrival]):
-        """Draw the next F and G train circles with upcoming trains to the right"""
-        # Separate and filter trains by line
-        f_trains = [t for t in trains if t.route_id == config.TRAIN_LINE_1]
-        g_trains = [t for t in trains if t.route_id == config.TRAIN_LINE_2]
+        """Draw arrivals for each MBTA route with inbound/outbound rows"""
+        circle_radius = 60
+        text_start_x = self.display.ICON_COLUMN_X + circle_radius + 30
+        text_area_width = self.display.MAIN_SECTION_WIDTH - text_start_x
 
-        def filter_trains(train_list: List[TrainArrival], max_trains: int = 6) -> List[TrainArrival]:
-            forty_min_trains = [t for t in train_list if t.minutes_until_arrival <= 40]
-            forty_min_trains = [t for t in forty_min_trains if t.minutes_until_arrival >= 1] # Remove 0 min trains
-            filtered = forty_min_trains[:max(3, len(forty_min_trains))]
-            return filtered[:min(max_trains, len(filtered))]
+        route_y_positions = [
+            self.subway.TRAIN_1_Y,
+            self.subway.TRAIN_2_Y,
+            self.subway.TRAIN_3_Y,
+        ]
 
-        next_f_trains = filter_trains(f_trains)
-        next_g_trains = filter_trains(g_trains, 4)
-
-        # Calculate dimensions
-        circle_radius = 80
-        logo_center_x = (self.display.MAIN_SECTION_WIDTH // 4)
-        text_area_width = self.display.MAIN_SECTION_WIDTH - (logo_center_x + circle_radius + 40)  # Space after logo
-
-        # Draw each train line section
-        self._draw_train_line_section(
-            draw=draw,
-            trains=next_f_trains,
-            route_id=config.TRAIN_LINE_1,
-            logo_center_x=logo_center_x,
-            logo_center_y=self.subway.F_TRAIN_Y,
-            circle_radius=circle_radius,
-            text_area_width=text_area_width
-        )
-
-        self._draw_train_line_section(
-            draw=draw,
-            trains=next_g_trains,
-            route_id=config.TRAIN_LINE_2,
-            logo_center_x=logo_center_x,
-            logo_center_y=self.subway.G_TRAIN_Y,
-            circle_radius=circle_radius,
-            text_area_width=text_area_width
-        )
-
-    def _draw_train_line_section(self, draw: ImageDraw.ImageDraw, trains: List[TrainArrival],
-                                route_id: str, logo_center_x: int, logo_center_y: int,
-                                circle_radius: int, text_area_width: int):
-        """Draw a complete train line section with logo and arrival times"""
-        # Draw the train line logo using the configured column position
-        self._draw_train_line_logo(
-            draw=draw,
-            line_letter=route_id,
-            x=self.display.ICON_COLUMN_X,  # Use configured position
-            y=logo_center_y,
-            radius=circle_radius
-        )
-        
-        # Calculate text start position (just after the logo)
-        text_start_x = self.display.ICON_COLUMN_X + circle_radius + 100
-        
-        # Draw arrival times with increased line height
-        line_height = 60  # Increased from 40
-        
-        # Adjust text_base_y based on number of trains. It's finicky, because odd and even have slightly different alignments
-        if len(trains) > 5:
-            # For more than 4 trains, start at the top of the section
-            text_base_y = logo_center_y - 70
-
-        elif len(trains) == 5:
-            text_base_y = logo_center_y - 65
-        elif len(trains) == 4:
-            text_base_y = logo_center_y - 30
-        elif len(trains) == 3:
-            text_base_y = logo_center_y + 10
-        elif len(trains) == 2:
-            text_base_y = logo_center_y + 50
-        elif len(trains) == 1:
-            text_base_y = logo_center_y + 85
-        
-        for i, train in enumerate(trains):
-            y = text_base_y + (i * (line_height + 12)) - line_height
-            self._draw_train_arrival_time(
+        for route_id, center_y in zip(config.MBTA_ROUTES, route_y_positions):
+            route_trains = [t for t in trains if t.route_id == route_id]
+            self._draw_train_line_section(
                 draw=draw,
-                train=train,
-                x=text_start_x,
-                y=y,
-                max_width=text_area_width
+                trains=route_trains,
+                route_id=route_id,
+                logo_center_y=center_y,
+                circle_radius=circle_radius,
+                text_start_x=text_start_x,
+                text_area_width=text_area_width,
             )
 
-    def _draw_train_arrival_time(self, draw: ImageDraw.ImageDraw, train: TrainArrival,
-                                x: int, y: int, max_width: int):
-        """Draw a train arrival time with minutes, 'min', and arrival time"""
-        time_font = fonts.get('xheader')
-        small_font = fonts.get('medium')
-        
-        # Split arrival time into components
-        arrival_hour = datetime.strptime(train.arrival_time, "%I:%M %p")
-        hour_str = arrival_hour.strftime("%I:%M")
-        ampm_str = arrival_hour.strftime("%p").lower()
-        
-        # Calculate all text widths
-        min_text = "min"
-        min_bbox = draw.textbbox((0, 0), min_text, font=small_font)
-        min_width = min_bbox[2] - min_bbox[0]
-        
-        minutes_width = time_font.getlength(str(train.minutes_until_arrival))
-        hour_width = time_font.getlength(hour_str)
-        ampm_width = small_font.getlength(ampm_str)
-        
-        # Calculate total width and right-align the entire block
-        total_width = minutes_width + 5 + min_width + 40 + hour_width + 5 + ampm_width
-        start_x = x + max_width - total_width
-        
-        # Draw minutes until arrival
-        draw.text(
-            (start_x, y),
-            str(train.minutes_until_arrival),
-            font=time_font,
-            fill=0,
-            anchor="ls"
-        )
-        
-        # Draw "min"
-        draw.text(
-            (start_x + minutes_width + 5, y),
-            min_text,
-            font=small_font,
-            fill=0,
-            anchor="ls"
-        )
-        
-        # Draw arrival time
-        time_x = start_x + minutes_width + min_width + 20
-        draw.text(
-            (time_x, y),
-            hour_str,
-            font=time_font,
-            fill=0,
-            anchor="ls"
-        )
-        
-        # Draw am/pm
-        draw.text(
-            (time_x + hour_width, y),
-            ampm_str,
-            font=small_font,
-            fill=0,
-            anchor="ls"
-        )
+    def _draw_train_line_section(self, draw: ImageDraw.ImageDraw, trains: List[TrainArrival],
+                                 route_id: str, logo_center_y: int, circle_radius: int,
+                                 text_start_x: int, text_area_width: int):
+        """Draw one route's circle and its inbound/outbound arrival rows"""
+        label = config.MBTA_ROUTE_LABELS.get(route_id, route_id[:2])
+        self._draw_train_line_logo(draw, label, self.display.ICON_COLUMN_X, logo_center_y, circle_radius)
 
-    def _draw_train_line_logo(self, draw: ImageDraw.ImageDraw, line_letter: str, 
+        inbound = [t for t in trains if t.direction_id == 1]
+        outbound = [t for t in trains if t.direction_id == 0]
+
+        # IB row above center, OB row below center
+        self._draw_direction_arrivals(draw, "IB", inbound, text_start_x, logo_center_y - 38, text_area_width)
+        self._draw_direction_arrivals(draw, "OB", outbound, text_start_x, logo_center_y + 38, text_area_width)
+
+    def _draw_direction_arrivals(self, draw: ImageDraw.ImageDraw, label: str,
+                                 trains: List[TrainArrival], x: int, y: int, max_width: int):
+        """Draw a direction label followed by up to 3 arrival times in minutes"""
+        label_font = fonts.get('xlarge')
+        num_font = fonts.get('xxlarge')
+        unit_font = fonts.get('medium')
+
+        label_w = int(label_font.getlength(label))
+        draw.text((x, y), label, font=label_font, fill=0, anchor="lm")
+
+        if not trains:
+            draw.text((x + label_w + 12, y), "—", font=num_font, fill=0, anchor="lm")
+            return
+
+        cur_x = x + label_w + 18
+        for i, train in enumerate(trains[:3]):
+            if cur_x >= x + max_width - 40:
+                break
+            min_str = str(train.minutes_until_arrival)
+            min_w = int(num_font.getlength(min_str))
+            draw.text((cur_x, y), min_str, font=num_font, fill=0, anchor="lm")
+            cur_x += min_w
+
+            if i < min(2, len(trains) - 1):
+                draw.text((cur_x + 3, y), "·", font=unit_font, fill=0, anchor="lm")
+                cur_x += int(unit_font.getlength("·")) + 10
+            else:
+                cur_x += 8
+
+        draw.text((cur_x, y), "min", font=unit_font, fill=0, anchor="lm")
+
+    def _draw_train_line_logo(self, draw: ImageDraw.ImageDraw, line_letter: str,
                              x: int, y: int, radius: int):
-        """Draw a subway train line logo"""
+        """Draw a route logo: filled circle with route label"""
         draw.ellipse(
             (x - radius, y - radius, x + radius, y + radius),
-            fill=0  # Black circle
+            fill=0
         )
         draw.text(
             (x, y),
             line_letter,
-            font=fonts.get('xheader'),
-            fill=255,  # White text
+            font=fonts.get('xxlarge'),
+            fill=255,
             anchor="mm"
         )
 
