@@ -56,7 +56,7 @@ class Runner:
         logger.info("Initializing Runner")
         self.display = Display()
         self.state = DisplayState()
-        self.min_interval = 1
+        self.min_interval = 20
         self._previous_top_trains: tuple[Optional[TrainArrival], Optional[TrainArrival]] = (None, None)
     
     def handle_weather_update(self, weather_data: Dict):

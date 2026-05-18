@@ -76,7 +76,7 @@ class LayoutManager:
         """Draw the current time in the header section"""
         now = datetime.now()
         date_str = now.strftime("%a, %b %d")
-        time_str = now.strftime("%I:%M:%S%p").lstrip('0').lower()
+        time_str = now.strftime("%I:%M%p").lstrip('0').lower()
         
         font = fonts.get('header')
         

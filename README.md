@@ -1,7 +1,7 @@
 # e-ink Subway & Weather Display
-A Raspberry Pi-powered e-ink display showing real-time subway arrival times and weather forecasts. Perfect for mounting on your wall to check train times and weather before heading out.
+A Raspberry Pi-powered e-ink display showing real-time MBTA arrival times and weather forecasts. Perfect for mounting on your wall to check train times and weather before heading out.
 
-Full Post [here](https://sambroner.com/posts/raspberry-pi-train).
+Derived from Sam's NYCT project [here](https://sambroner.com/posts/raspberry-pi-train).
 
 # Features
 - Real-time subway arrival times
@@ -28,7 +28,7 @@ Full Post [here](https://sambroner.com/posts/raspberry-pi-train).
 
 To test the display on Raspberry Pi:
 ```bash
-git clone https://github.com/sambroner/subway-eink.git
+git clone https://github.com/flanagansteve/subway-e-ink-tracker.git
 cd subway-eink
 uv sync
 uv run test.py
@@ -77,6 +77,7 @@ Figuring out the right display mode was annoying. The full spec is [here](https:
 
 ## Credits
 - IT8951 library by GregDMeyer: https://github.com/GregDMeyer/IT8951
+- Sam, for the NYCT version: https://github.com/SamBroner/subway-e-ink-tracker. I only barely tweaked it to wrap it around the MBTA API instead.
 
 ## Setting up as a service
 To have the display start automatically on boot:
@@ -93,7 +94,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=sambroner
+User={your username}
 WorkingDirectory=/path/to/repo
 ExecStart=/path/to/uv run runner.py
 Restart=always
