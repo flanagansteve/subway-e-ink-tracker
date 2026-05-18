@@ -73,7 +73,8 @@ Figuring out the right display mode was annoying. The full spec is [here](https:
 ## To Do
 - [ ] Consider checking if the wait time still makes sense and then refresh. E.g. It's 11am. Train Arrives at 11:04 and there's no update. When time turns to 11:01, even if no update, refresh.
 - [ ] Fix hourly weather... seems like it's only 100% or zero?
-
+- [ ] Use [Transit's API](https://api-doc.transitapp.com) instead of the raw MBTA API; it'd be a superset of the data the MBTA has, and would include Transit's crowdsourced on-train data.
+- [ ] Modify the IB / OB labelling to instead dynamically use each route's terminal - e.g., for the C Line, show Cleveland Circle on one row and Government Center on the other (or an abbreviation) 
 
 ## Credits
 - IT8951 library by GregDMeyer: https://github.com/GregDMeyer/IT8951
