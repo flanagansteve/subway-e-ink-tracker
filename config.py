@@ -75,9 +75,15 @@ class Config:
         logger.info("Loading configuration from environment variables...")
         self.DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
 
+        self.USE_TRANSIT_API = os.getenv('USE_TRANSIT_API', 'false').lower() == 'true'
+
         self.MBTA_API_KEY = os.getenv('MBTA_API_KEY')
-        if not self.MBTA_API_KEY:
+        if not self.USE_TRANSIT_API and not self.MBTA_API_KEY:
             raise ValueError("MBTA_API_KEY must be set in .env file")
+
+        self.TRANSIT_API_KEY = os.getenv('TRANSIT_API_KEY')
+        if self.USE_TRANSIT_API and not self.TRANSIT_API_KEY:
+            raise ValueError("TRANSIT_API_KEY must be set in .env file when USE_TRANSIT_API=true")
 
         # Stop IDs to poll for predictions
         self.MBTA_STOPS = [
@@ -86,6 +92,19 @@ class Config:
             '1308',           # Route 66 — Harvard St @ Beacon St (inbound toward Harvard)
             '1372',           # Route 66 — Harvard St @ Beacon St (outbound toward Nubian)
             'place-WML-0025', # Framingham/Worcester Line — Lansdowne
+        ]
+
+        # Transit API stop configuration
+        # direction_map: Transit API direction_id -> display direction_id (MBTA convention)
+        # Transit inverts direction vs MBTA for Green/Bus; CR matches MBTA
+        self.TRANSIT_STOPS = [
+            {'global_stop_id': 'MBTA:91499', 'display_route': 'Green-B',     'direction_map': {0: 1, 1: 0}},
+            {'global_stop_id': 'MBTA:91509', 'display_route': 'Green-B',     'direction_map': {0: 1, 1: 0}},
+            {'global_stop_id': 'MBTA:91439', 'display_route': 'Green-C',     'direction_map': {0: 1, 1: 0}},
+            {'global_stop_id': 'MBTA:91459', 'display_route': 'Green-C',     'direction_map': {0: 1, 1: 0}},
+            {'global_stop_id': 'MBTA:82188', 'display_route': '66',          'direction_map': {0: 1, 1: 0}},
+            {'global_stop_id': 'MBTA:82223', 'display_route': '66',          'direction_map': {0: 1, 1: 0}},
+            {'global_stop_id': 'MBTA:85115', 'display_route': 'CR-Worcester','direction_map': {0: 0, 1: 1}},
         ]
 
         # Route IDs to display, in order top-to-bottom
@@ -99,12 +118,21 @@ class Config:
             'CR-Worcester': 'WR',
         }
 
-        # Human-readable direction labels per route
+        # Human-readable direction labels per route (used for TrainArrival.direction_label)
         self.MBTA_DIRECTION_LABELS = {
             'Green-B':      {0: 'Boston Col', 1: 'Govt Ctr'},
             'Green-C':      {0: 'Clev Cir',   1: 'Pk St'},
             '66':           {0: 'Nubian',      1: 'Harvard'},
             'CR-Worcester': {0: 'Worcester',   1: 'South Sta'},
+        }
+
+        # Short terminus labels shown in the direction rows on the display
+        # direction_id 1 = top row (was "IB"), direction_id 0 = bottom row (was "OB")
+        self.ROUTE_DIRECTION_SHORT_LABELS = {
+            'Green-B':      {0: 'BC',  1: 'GOV'},
+            'Green-C':      {0: 'CLE', 1: 'GOV'},
+            '66':           {0: 'NUB', 1: 'HAR'},
+            'CR-Worcester': {0: 'WOR', 1: 'SS'},
         }
         
         # Display configurations

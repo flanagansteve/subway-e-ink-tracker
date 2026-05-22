@@ -1,11 +1,12 @@
-from subway_service import MBTAService
+from subway_service import subway_service, MBTAService, TransitService
 from config import config
 from datetime import datetime
 
-service = MBTAService()
+service = subway_service
 trains = service.get_upcoming_trains()
 
-print(f"Fetched {len(trains)} predictions at {datetime.now().strftime('%H:%M:%S')}\n")
+api_name = "Transit" if isinstance(service, TransitService) else "MBTA"
+print(f"[{api_name} API] Fetched {len(trains)} predictions at {datetime.now().strftime('%H:%M:%S')}\n")
 
 for route_id in config.MBTA_ROUTES:
     label = config.MBTA_ROUTE_LABELS[route_id]
