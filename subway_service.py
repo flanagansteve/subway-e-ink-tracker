@@ -18,6 +18,7 @@ class TrainArrival:
     route_id: str
     direction_id: int
     direction_label: str
+    arrival_datetime: datetime = None  # kept for cache expiry recomputation
 
     def __eq__(self, other):
         if not isinstance(other, TrainArrival):
@@ -35,6 +36,8 @@ class MBTAService:
         self._update_thread: Optional[threading.Thread] = None
         self._should_run = False
         self._current_trains: List[TrainArrival] = []
+        # keyed by (route_id, direction_id) → last known non-empty arrivals
+        self._cache: dict[tuple, List[TrainArrival]] = {}
 
     def subscribe(self, callback: Callable[[List[TrainArrival]], None]):
         self._subscribers.append(callback)
@@ -91,6 +94,8 @@ class MBTAService:
     def get_upcoming_trains(self) -> List[TrainArrival]:
         arrivals = []
         seen = set()
+        fresh: dict[tuple, List[TrainArrival]] = {}
+
         for stop_id in config.MBTA_STOPS:
             try:
                 r = requests.get(
@@ -104,8 +109,37 @@ class MBTAService:
                     if arrival and arrival.train_id not in seen:
                         arrivals.append(arrival)
                         seen.add(arrival.train_id)
+                        key = (arrival.route_id, arrival.direction_id)
+                        fresh.setdefault(key, []).append(arrival)
             except Exception as e:
                 logger.error(f"Error fetching predictions for stop {stop_id}: {e}")
+
+        # Update cache with fresh results
+        self._cache.update(fresh)
+
+        # Fill in any route+direction that came back empty from cache
+        now = datetime.now().astimezone()
+        for route_id in config.MBTA_ROUTES:
+            for direction_id in (0, 1):
+                key = (route_id, direction_id)
+                if key not in fresh and key in self._cache:
+                    for cached in self._cache[key]:
+                        if (cached.arrival_datetime
+                                and cached.arrival_datetime > now
+                                and cached.train_id not in seen):
+                            minutes = max(0, round(
+                                (cached.arrival_datetime - now).total_seconds() / 60
+                            ))
+                            arrivals.append(TrainArrival(
+                                minutes_until_arrival=minutes,
+                                arrival_time=cached.arrival_time,
+                                train_id=cached.train_id,
+                                route_id=cached.route_id,
+                                direction_id=cached.direction_id,
+                                direction_label=cached.direction_label,
+                                arrival_datetime=cached.arrival_datetime,
+                            ))
+                            seen.add(cached.train_id)
 
         return sorted(arrivals, key=lambda x: x.minutes_until_arrival)
 
@@ -132,6 +166,7 @@ class MBTAService:
                 route_id=route_id,
                 direction_id=direction_id,
                 direction_label=direction_label,
+                arrival_datetime=arrival_time,
             )
         except Exception as e:
             logger.error(f"Error processing prediction: {e}")
@@ -148,6 +183,7 @@ class TransitService:
         self._update_thread: Optional[threading.Thread] = None
         self._should_run = False
         self._current_trains: List[TrainArrival] = []
+        self._cache: dict[tuple, List[TrainArrival]] = {}
 
     def subscribe(self, callback: Callable[[List[TrainArrival]], None]):
         self._subscribers.append(callback)
@@ -204,6 +240,8 @@ class TransitService:
     def get_upcoming_trains(self) -> List[TrainArrival]:
         arrivals = []
         seen = set()
+        fresh: dict[tuple, List[TrainArrival]] = {}
+
         for stop_cfg in config.TRANSIT_STOPS:
             try:
                 r = requests.get(
@@ -221,12 +259,42 @@ class TransitService:
                         for item in itinerary.get("schedule_items", []):
                             arrival = self._process_schedule_item(item, itinerary, stop_cfg)
                             if arrival:
-                                key = (arrival.train_id, arrival.route_id)
-                                if key not in seen:
+                                trip_key = (arrival.train_id, arrival.route_id)
+                                if trip_key not in seen:
                                     arrivals.append(arrival)
-                                    seen.add(key)
+                                    seen.add(trip_key)
+                                    rd_key = (arrival.route_id, arrival.direction_id)
+                                    fresh.setdefault(rd_key, []).append(arrival)
             except Exception as e:
                 logger.error(f"Error fetching Transit departures for {stop_cfg['global_stop_id']}: {e}")
+
+        # Update cache with fresh results
+        self._cache.update(fresh)
+
+        # Fill in any route+direction that came back empty from cache
+        now = datetime.now().astimezone()
+        for route_id in config.MBTA_ROUTES:
+            for direction_id in (0, 1):
+                key = (route_id, direction_id)
+                if key not in fresh and key in self._cache:
+                    for cached in self._cache[key]:
+                        trip_key = (cached.train_id, cached.route_id)
+                        if (cached.arrival_datetime
+                                and cached.arrival_datetime > now
+                                and trip_key not in seen):
+                            minutes = max(0, round(
+                                (cached.arrival_datetime - now).total_seconds() / 60
+                            ))
+                            arrivals.append(TrainArrival(
+                                minutes_until_arrival=minutes,
+                                arrival_time=cached.arrival_time,
+                                train_id=cached.train_id,
+                                route_id=cached.route_id,
+                                direction_id=cached.direction_id,
+                                direction_label=cached.direction_label,
+                                arrival_datetime=cached.arrival_datetime,
+                            ))
+                            seen.add(trip_key)
 
         return sorted(arrivals, key=lambda x: x.minutes_until_arrival)
 
@@ -257,6 +325,7 @@ class TransitService:
                 route_id=route_id,
                 direction_id=display_direction,
                 direction_label=direction_label,
+                arrival_datetime=departure_dt.astimezone(),
             )
         except Exception as e:
             logger.error(f"Error processing Transit schedule item: {e}")
